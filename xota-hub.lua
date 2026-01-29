@@ -1,4 +1,4 @@
---[[
+true--[[
     ═══════════════════════════════════════════════════════════════
     ██╗  ██╗    ██╗  ██╗██╗   ██╗██████╗ 
     ╚██╗██╔╝    ██║  ██║██║   ██║██╔══██╗
@@ -7,8 +7,8 @@
     ██╔╝ ██╗    ██║  ██║╚██████╔╝██████╔╝
     ╚═╝  ╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ 
     ═══════════════════════════════════════════════════════════════
-    Arceus X NEO
-    v2.0.0
+    Arceus X NEO (Speed Update)
+    v2.1.0
     ═══════════════════════════════════════════════════════════════
 ]]
 
@@ -28,6 +28,8 @@ local v_Theme = {
 }
 
 local v_Data = {
+    -- Player (Speed)
+    walkspeed = 16, -- Padrão do Roblox
     -- Visuais
     var1 = false, -- Highlight
     var2 = false, -- Names
@@ -58,7 +60,7 @@ FovCircle.Visible = false
 
 -- // INTERFACE (UI)
 local v_Gui = Instance.new("ScreenGui")
-v_Gui.Name = "XotaHB_Final"
+v_Gui.Name = "XotaHB_Final_Speed"
 v_Gui.ResetOnSpawn = false
 if pcall(function() v_Gui.Parent = game.CoreGui end) then
     v_Gui.Parent = game.CoreGui
@@ -173,29 +175,23 @@ v_Content.Parent = v_Main
 -- // FUNÇÕES AUXILIARES (Aimbot)
 local function IsVisible(targetPart)
     if not v_Data.wallcheck then return true end
-    -- Raycast simples para checar parede
     local origin = Camera.CFrame.Position
     local direction = (targetPart.Position - origin)
     local rayParams = RaycastParams.new()
-    rayParams.FilterDescendantsInstances = {Player.Character, targetPart.Parent} -- Ignora a si mesmo e o alvo
+    rayParams.FilterDescendantsInstances = {Player.Character, targetPart.Parent} 
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
-    
     local result = workspace:Raycast(origin, direction, rayParams)
-    return result == nil -- Se for nil, não bateu em nada (parede), então está visível
+    return result == nil
 end
 
 local function GetClosestPlayer()
     local closest = nil
     local shortestDistance = v_Data.fovsize
-
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= Player and p.Character and p.Character:FindFirstChild(v_Data.targetpart) and p.Character.Humanoid.Health > 0 then
-            -- Checagem de Amigo
             if v_Data.ignorefriends and p:IsFriendsWith(Player.UserId) then continue end
-            
             local part = p.Character[v_Data.targetpart]
             local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
-            
             if onScreen then
                 local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
                 if distance < shortestDistance then
@@ -229,10 +225,8 @@ local function func_Btn(page, txt, key, call)
     btn.MouseButton1Click:Connect(function() v_Data[key] = not v_Data[key]; btn.BackgroundColor3 = v_Data[key] and v_Theme.Acc or Color3.fromRGB(50, 0, 0); if call then call(v_Data[key]) end end)
 end
 
--- Função para Criar Controladores de Valor (+ e -)
 local function func_Control(page, title, key, step, maxVal)
     local bg = Instance.new("Frame"); bg.Size = UDim2.new(1, -10, 0, 35); bg.BackgroundColor3 = v_Theme.DarkBg; bg.BackgroundTransparency = 0.5; bg.Parent = page; Instance.new("UICorner", bg)
-    
     local lbl = Instance.new("TextLabel"); lbl.Size = UDim2.new(0.5, 0, 1, 0); lbl.Position = UDim2.fromOffset(10, 0); lbl.Text = title .. ": " .. v_Data[key]; lbl.TextColor3 = v_Theme.Txt; lbl.Font = Enum.Font.Gotham; lbl.BackgroundTransparency = 1; lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Parent = bg
 
     local btnPlus = Instance.new("TextButton"); btnPlus.Size = UDim2.fromOffset(25, 25); btnPlus.Position = UDim2.new(1, -35, 0.5, -12); btnPlus.BackgroundColor3 = Color3.fromRGB(40,40,40); btnPlus.Text = "+"; btnPlus.TextColor3 = Color3.new(1,1,1); btnPlus.Font = Enum.Font.GothamBold; btnPlus.Parent = bg; Instance.new("UICorner", btnPlus)
@@ -264,14 +258,9 @@ func_Btn(p_Aim, "Aimbot", "aimlock")
 func_Btn(p_Aim, "Aimfov", "showfov")
 func_Btn(p_Aim, "Ignore Friends", "ignorefriends")
 func_Btn(p_Aim, "Wallcheck", "wallcheck")
-
--- Controle FOV Size
 func_Control(p_Aim, "Fov Size", "fovsize", 10, 500)
-
--- Controle Smoothness
 func_Control(p_Aim, "Smoothness", "smoothness", 10, 100)
 
--- Botão de Escolher Parte do Corpo (Target)
 local targetBtn = Instance.new("TextButton", p_Aim)
 targetBtn.Size = UDim2.new(1, -10, 0, 35); targetBtn.BackgroundColor3 = v_Theme.DarkBg; targetBtn.BackgroundTransparency = 0.5; targetBtn.TextColor3 = v_Theme.Txt; targetBtn.Font = Enum.Font.GothamBold; targetBtn.Text = "Target: HEAD"
 Instance.new("UICorner", targetBtn)
@@ -284,7 +273,6 @@ targetBtn.MouseButton1Click:Connect(function()
         targetBtn.Text = "Target: HEAD"
     end
 end)
-
 
 -- ## ABA VISUALS ##
 local function func_AddH(c)
@@ -314,15 +302,23 @@ func_Btn(p_Vis, "Show Names", "var2")
 func_Btn(p_Vis, "Show Health", "var3")
 func_Btn(p_Vis, "Tracers", "var4")
 
-
--- ## ABA SETTINGS ##
+-- ## ABA SETTINGS (NOVO) ##
 func_Btn(p_Set, "RGB Outline", "var5")
-
+-- ADICIONADO: Controle de Velocidade
+func_Control(p_Set, "Walk Speed", "walkspeed", 2, 100)
 
 -- // LOOPS DE FUNCIONAMENTO (Runtime)
-
--- 1. Loop Principal (Aimbot + Visuals Updates)
 RunService.RenderStepped:Connect(function()
+    
+    -- >>> LOGICA DE VELOCIDADE (SPEED) <<<
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        -- Se o WalkSpeed estiver diferente do escolhido, força a mudança
+        if Player.Character.Humanoid.WalkSpeed ~= v_Data.walkspeed then
+            Player.Character.Humanoid.WalkSpeed = v_Data.walkspeed
+        end
+    end
+    -- >>> FIM LÓGICA SPEED <<<
+
     -- RGB
     if v_Data.var5 then 
         local h = (tick() % 5) / 5
@@ -332,25 +328,20 @@ RunService.RenderStepped:Connect(function()
         v_Stroke1.Color = v_Theme.Acc; v_Stroke2.Color = v_Theme.Acc
     end
 
-    -- FOV Circle
+    -- FOV
     FovCircle.Visible = v_Data.showfov
     FovCircle.Radius = v_Data.fovsize
     FovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
-    -- Aimlock & Smoothness
+    -- Aimlock
     if v_Data.aimlock then
         local target = GetClosestPlayer()
         if target and target.Character and target.Character:FindFirstChild(v_Data.targetpart) then
             local goalPos = target.Character[v_Data.targetpart].Position
             local mainCf = CFrame.new(Camera.CFrame.Position, goalPos)
-            
             if v_Data.smoothness > 0 then
-                -- Calcula fator de suavização (100 = Muito suave, 0 = Instantâneo)
-                -- Usamos um valor base pequeno para Lerp se Smoothness for alto
                 local smoothFactor = (100 - v_Data.smoothness) / 100
-                -- Garante que não trave se for 100, define mínimo de movimento
                 if smoothFactor < 0.05 then smoothFactor = 0.05 end
-                
                 Camera.CFrame = Camera.CFrame:Lerp(mainCf, smoothFactor)
             else
                 Camera.CFrame = mainCf
@@ -358,10 +349,9 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Tracers & Billboards
+    -- Visuals
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            -- Tracer
             if v_Data.var4 and p.Character.Humanoid.Health > 0 then
                 local hrp = p.Character.HumanoidRootPart
                 local sPos, vis = Camera:WorldToViewportPoint(hrp.Position)
@@ -376,8 +366,6 @@ RunService.RenderStepped:Connect(function()
             else
                 if v_List[p.Name] then v_List[p.Name].Visible = false end
             end
-
-            -- Billboard
             if v_Data.var2 or v_Data.var3 then
                 local b = p.Character:FindFirstChild("Box_Info")
                 if not b then
@@ -396,13 +384,12 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 2. Loop de Recarregamento (5 Segundos) - Evita bugs no ESP
+-- Loop de Recarregamento
 task.spawn(function()
     while task.wait(5) do
         if v_Data.var1 then
             for _, p in pairs(Players:GetPlayers()) do
                 if p ~= Player and p.Character then
-                    -- Remove Highlight antigo e cria um novo
                     local old = p.Character:FindFirstChild("Obj_H_Final")
                     if old then old:Destroy() end
                     func_AddH(p.Character)
@@ -412,4 +399,4 @@ task.spawn(function()
     end
 end)
 
-p_Aim.Visible = true -- Começa na aba Combat
+p_Aim.Visible = true
