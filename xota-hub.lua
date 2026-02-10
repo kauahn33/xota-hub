@@ -7,8 +7,8 @@
     ██╔╝ ██╗    ██║  ██║╚██████╔╝██████╔╝
     ╚═╝  ╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ 
     ═══════════════════════════════════════════════════════════════
-    Arceus X NEO
-    v2.0.0
+    Arceus X NEO - Elite Edition
+    v2.1.0 (Com Team Check Profissional)
     ═══════════════════════════════════════════════════════════════
 ]]
 
@@ -41,7 +41,7 @@ local v_Data = {
     smoothness = 0,     -- 0 = Rápido, 100 = Lento
     ignorefriends = false,
     wallcheck = false,
-    teamcheck = false,
+    teamcheck = false,  -- [NOVO] Team Check
     targetpart = "Head" -- "Head" ou "HumanoidRootPart"
 }
 
@@ -171,7 +171,7 @@ v_Content.Position = UDim2.fromOffset(145, 45)
 v_Content.BackgroundTransparency = 1
 v_Content.Parent = v_Main
 
--- // FUNÇÕES AUXILIARES (Aimbot)
+-- // FUNÇÕES AUXILIARES (Aimbot & Checks)
 local function IsVisible(targetPart)
     if not v_Data.wallcheck then return true end
     -- Raycast simples para checar parede
@@ -185,19 +185,44 @@ local function IsVisible(targetPart)
     return result == nil -- Se for nil, não bateu em nada (parede), então está visível
 end
 
-
--- // FUNÇÃO DE TEAM CHECK
--- Retorna true se o jogador for do mesmo time e a opção estiver ativada
+-- [NOVO] Função para Verificar Time
 local function IsTeammate(targetPlayer)
-    if not v_Data.teamcheck then return false end -- Se a opção estiver desligada, ignora
+    if not v_Data.teamcheck then return false end -- Se desligado, não filtra
     
-    -- Verifica se ambos estão em times e se são o mesmo time
+    -- Verifica propriedades de Time
     if Player.Team and targetPlayer.Team then
         return Player.Team == targetPlayer.Team
     end
-    
-    -- Fallback: Em jogos antigos que usam apenas TeamColor sem objeto Team
+    -- Fallback para cores
     return Player.TeamColor == targetPlayer.TeamColor
+end
+
+local function GetClosestPlayer()
+    local closest = nil
+    local shortestDistance = v_Data.fovsize
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= Player and p.Character and p.Character:FindFirstChild(v_Data.targetpart) and p.Character.Humanoid.Health > 0 then
+            
+            -- [NOVO] Filtros de Amigo e Time
+            if v_Data.ignorefriends and p:IsFriendsWith(Player.UserId) then continue end
+            if IsTeammate(p) then continue end -- Ignora se for time
+
+            local part = p.Character[v_Data.targetpart]
+            local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            
+            if onScreen then
+                local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                if distance < shortestDistance then
+                    if IsVisible(part) then
+                        shortestDistance = distance
+                        closest = p
+                    end
+                end
+            end
+        end
+    end
+    return closest
 end
 
 -- // FUNÇÕES UI
@@ -253,6 +278,7 @@ local p_Set = func_Page("Settings")
 func_Btn(p_Aim, "Aimbot", "aimlock")
 func_Btn(p_Aim, "Aimfov", "showfov")
 func_Btn(p_Aim, "Ignore Friends", "ignorefriends")
+func_Btn(p_Aim, "Team Check", "teamcheck") -- [NOVO] Botão Team Check
 func_Btn(p_Aim, "Wallcheck", "wallcheck")
 
 -- Controle FOV Size
@@ -297,8 +323,16 @@ local function func_RemH()
 end
 
 func_Btn(p_Vis, "Highlight ESP", "var1", function(v)
-    if v then for _, p in pairs(Players:GetPlayers()) do if p ~= Player and p.Character then func_AddH(p.Character) end end
-    else func_RemH() end
+    if v then 
+        for _, p in pairs(Players:GetPlayers()) do 
+            -- [NOVO] Adicionado check de time aqui também
+            if p ~= Player and p.Character and not IsTeammate(p) then 
+                func_AddH(p.Character) 
+            end 
+        end
+    else 
+        func_RemH() 
+    end
 end)
 func_Btn(p_Vis, "Show Names", "var2")
 func_Btn(p_Vis, "Show Health", "var3")
@@ -335,10 +369,8 @@ RunService.RenderStepped:Connect(function()
             local mainCf = CFrame.new(Camera.CFrame.Position, goalPos)
             
             if v_Data.smoothness > 0 then
-                -- Calcula fator de suavização (100 = Muito suave, 0 = Instantâneo)
-                -- Usamos um valor base pequeno para Lerp se Smoothness for alto
+                -- Calcula fator de suavização
                 local smoothFactor = (100 - v_Data.smoothness) / 100
-                -- Garante que não trave se for 100, define mínimo de movimento
                 if smoothFactor < 0.05 then smoothFactor = 0.05 end
                 
                 Camera.CFrame = Camera.CFrame:Lerp(mainCf, smoothFactor)
@@ -351,55 +383,17 @@ RunService.RenderStepped:Connect(function()
     -- Tracers & Billboards
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            -- Tracer
-            if v_Data.var4 and p.Character.Humanoid.Health > 0 then
-                local hrp = p.Character.HumanoidRootPart
-                local sPos, vis = Camera:WorldToViewportPoint(hrp.Position)
-                if vis then
-                    if not v_List[p.Name] then local l = Drawing.new("Line"); l.Thickness = 1.5; l.Color = Color3.fromRGB(255, 0, 0); v_List[p.Name] = l end
-                    v_List[p.Name].Visible = true
-                    v_List[p.Name].From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                    v_List[p.Name].To = Vector2.new(sPos.X, sPos.Y)
-                else
-                    if v_List[p.Name] then v_List[p.Name].Visible = false end
-                end
-            else
-                if v_List[p.Name] then v_List[p.Name].Visible = false end
-            end
+            
+            -- [NOVO] Validação de Time para Visuais
+            local shouldDraw = true
+            if IsTeammate(p) then shouldDraw = false end
 
-            -- Billboard
-            if v_Data.var2 or v_Data.var3 then
-                local b = p.Character:FindFirstChild("Box_Info")
-                if not b then
-                    b = Instance.new("BillboardGui", p.Character)
-                    b.Name = "Box_Info"; b.Size = UDim2.fromOffset(200, 50); b.AlwaysOnTop = true; b.StudsOffset = Vector3.new(0, -4.5, 0); b.Adornee = p.Character.HumanoidRootPart
-                    local t = Instance.new("TextLabel", b); t.Size = UDim2.fromScale(1,1); t.BackgroundTransparency = 1; t.TextColor3 = Color3.new(1,1,1); t.Font = Enum.Font.GothamBold; t.TextSize = 13; t.TextStrokeTransparency = 0
-                end
-                local txt = ""
-                if v_Data.var2 then txt = p.Name end
-                if v_Data.var3 then txt = txt .. "\nHP: " .. math.floor(p.Character.Humanoid.Health) end
-                b.TextLabel.Text = txt
-            else
-                if p.Character:FindFirstChild("Box_Info") then p.Character.Box_Info:Destroy() end
-            end
-        end
-    end
-end)
-
--- 2. Loop de Recarregamento (5 Segundos) - Evita bugs no ESP
-task.spawn(function()
-    while task.wait(5) do
-        if v_Data.var1 then
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= Player and p.Character then
-                    -- Remove Highlight antigo e cria um novo
-                    local old = p.Character:FindFirstChild("Obj_H_Final")
-                    if old then old:Destroy() end
-                    func_AddH(p.Character)
-                end
-            end
-        end
-    end
-end)
-
-p_Aim.Visible = true -- Começa na aba Combat
+            if shouldDraw then
+                -- Tracer
+                if v_Data.var4 and p.Character.Humanoid.Health > 0 then
+                    local hrp = p.Character.HumanoidRootPart
+                    local sPos, vis = Camera:WorldToViewportPoint(hrp.Position)
+                    if vis then
+                        if not v_List[p.Name] then local l = Drawing.new("Line"); l.Thickness = 1.5; l.Color = Color3.fromRGB(255, 0, 0); v_List[p.Name] = l end
+                        v_List[p.Name].Visible = true
+           
